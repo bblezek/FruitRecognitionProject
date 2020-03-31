@@ -44,6 +44,8 @@ def prepare_image_and_label(filepath):
 
 # Create dataset
 full_ds = []
+images =[]
+labels =[]
 
 # "Pickling" dataset so we don't need to re-create it every time
 full_ds_file = 'full-dataset-data.joblib'
@@ -51,64 +53,68 @@ if not os.path.exists(full_ds_file):
     for f in tqdm.tqdm(file_list):
         try:
             image, label = prepare_image_and_label(f)
-            full_ds.append((image, label))
+            images.append(image)
+            labels.append(label)
         # If file can't be "prepared"
         except Exception:
             print(f"{f} failed continuing")
     with open(full_ds_file, 'wb') as fid:
-        joblib.dump(full_ds, fid)
+        joblib.dump({"images": images, "labels":labels},fid)
+        # joblib.dump(full_ds, fid)
 else:
     with open(full_ds_file, 'rb') as f:
         full_ds = joblib.load(f)
+        images = full_ds["images"]
+        labels = full_ds["labels"]
 
-np.random.shuffle(full_ds)
+# np.random.shuffle(full_ds)
 
 validation_size = int(0.15 * image_count)
 test_size = int(0.15 * image_count)
 train_size = image_count - validation_size - test_size
 
-print(validation_size)
-print(test_size)
-all_sets = np.split(full_ds, [validation_size, validation_size + test_size])
-val_set = all_sets[0]
-test_set = all_sets[1]
-train_set = all_sets[2]
-print(len(val_set))
-print(len(test_set))
-print(len(train_set))
+test_images = images[:test_size]
+train_images = images[test_size:]
+test_labels = labels[:test_size]
+train_labels = labels[test_size:]
 
 model = models.Sequential()
-model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(256, 256, 3)))
+model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(320, 258, 3)))
 model.add(layers.MaxPooling2D((2, 2)))
 
-model.add(layers.Conv2D(64, (3, 3), activation='relu', input_shape=(256, 256, 3)))
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
 model.add(layers.MaxPooling2D((2, 2)))
 
-model.add(layers.Conv2D(128, (3, 3,), activation='relu', input_shape=(256, 256, 3)))
+model.add(layers.Conv2D(128, (3, 3,), activation='relu'))
 model.add(layers.MaxPooling2D((2, 2)))
 
-model.add(layers.Conv2D(128, (3, 3), activation='relu', input_shape=(256, 256, 3)))
+model.add(layers.Conv2D(128, (3, 3), activation='relu'))
 model.add(layers.MaxPooling2D((2, 2)))
 
 model.add(layers.Flatten())
 
 model.add(layers.Dense(512, activation='relu'))
-model.add(layers.Dense(1, activation='sigmoid'))
+model.add(layers.Dense(15, activation='sigmoid'))
 
 model.summary()
 
-model.compile(loss='binary_crossentropy',
+model.compile(loss='categorical_crossentropy',
               optimizer=optimizers.RMSprop(lr=1e-4),
               metrics=['acc'])
 
 batch_size = 32
-train_steps = train_size // batch_size
+train_steps = (train_size-validation_size) // batch_size
 validation_steps = validation_size // batch_size
 print(train_steps)
 
-history = model.fit(train_ds,
+
+history = model.fit(train_images,
+                    train_labels,
                     epochs=20,
-                    validation_data=validation_ds)
+                    batch_size=32,
+                    validation_split=0.15,
+                    shuffle=True
+                    )
 
 acc = history.history['acc']
 val_acc = history.history['val_acc']
