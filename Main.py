@@ -13,9 +13,11 @@ from tensorflow.keras.utils import to_categorical
 import joblib
 import cv2
 import tqdm
+import random
 
 fruit_folder = pathlib.Path('D:/Brin/fruit-recognition/')
 file_list = glob.glob(os.path.join(fruit_folder, '*/*.png'))
+random.shuffle(file_list)
 image_count = len(file_list)
 print(image_count)
 
@@ -44,8 +46,8 @@ def prepare_image_and_label(filepath):
 
 # Create dataset
 full_ds = []
-images =[]
-labels =[]
+images = []
+labels = []
 
 # "Pickling" dataset so we don't need to re-create it every time
 full_ds_file = 'full-dataset-data.joblib'
@@ -66,8 +68,11 @@ else:
         full_ds = joblib.load(f)
         images = full_ds["images"]
         labels = full_ds["labels"]
+        full_ds.clear()
 
 # np.random.shuffle(full_ds)
+images = np.asarray(images)
+labels = np.asarray(labels)
 
 validation_size = int(0.15 * image_count)
 test_size = int(0.15 * image_count)
@@ -101,11 +106,6 @@ model.summary()
 model.compile(loss='categorical_crossentropy',
               optimizer=optimizers.RMSprop(lr=1e-4),
               metrics=['acc'])
-
-batch_size = 32
-train_steps = (train_size-validation_size) // batch_size
-validation_steps = validation_size // batch_size
-print(train_steps)
 
 
 history = model.fit(train_images,
