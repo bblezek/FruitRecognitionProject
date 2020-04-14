@@ -130,6 +130,7 @@ val_loss = history.history['val_loss']
 
 epochs = range(1, len(acc) + 1)
 
+#Plotting results
 plt.plot(epochs, acc, 'bo', label='Training acc')
 plt.plot(epochs, val_acc, 'b', label='Validation acc')
 plt.legend()
