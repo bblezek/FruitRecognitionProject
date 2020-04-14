@@ -16,19 +16,23 @@ import tqdm
 import random
 
 fruit_folder = pathlib.Path('D:/Brin/fruit-recognition/')
+# Creating list of all image file names
 file_list = glob.glob(os.path.join(fruit_folder, '*/*.png'))
+
+# Shuffling file names so we don't have to shuffle our dataset later
 random.shuffle(file_list)
 image_count = len(file_list)
-print(image_count)
 
+# Creating classes
 directories = [item.name for item in fruit_folder.glob('*')]
 category_map = {category: index for index, category in enumerate(directories)}
 number_of_categories = len(directories)
-print(directories)
 
+# Creates a numpy array of the image and adds it to a list of images
+# Also one-hot encodes the label and adds it to a list of labels
 def prepare_image_and_label(filepath):
     # Creating label from folder name
-    fp = filepath  # str(filepath.numpy())
+    fp = filepath
     os.path.split(fp)
     parts = fp.split(os.path.sep)
     label = parts[-2]
@@ -57,12 +61,11 @@ if not os.path.exists(full_ds_file):
             image, label = prepare_image_and_label(f)
             images.append(image)
             labels.append(label)
-        # If file can't be "prepared"
+        # If image can't be "prepared"
         except Exception:
             print(f"{f} failed continuing")
     with open(full_ds_file, 'wb') as fid:
         joblib.dump({"images": images, "labels":labels},fid)
-        # joblib.dump(full_ds, fid)
 else:
     with open(full_ds_file, 'rb') as f:
         full_ds = joblib.load(f)
@@ -70,14 +73,12 @@ else:
         labels = full_ds["labels"]
         full_ds.clear()
 
-# np.random.shuffle(full_ds)
+# Casting image and label lists into numpy arrays
 images = np.asarray(images)
 labels = np.asarray(labels)
 
-validation_size = int(0.15 * image_count)
+# Splitting dataset into testing and training sets
 test_size = int(0.15 * image_count)
-train_size = image_count - validation_size - test_size
-
 test_images = images[:test_size]
 train_images = images[test_size:]
 test_labels = labels[:test_size]
@@ -96,29 +97,36 @@ model.add(layers.MaxPooling2D((2, 2)))
 model.add(layers.Conv2D(128, (3, 3), activation='relu'))
 model.add(layers.MaxPooling2D((2, 2)))
 
-model.add(layers.Flatten())
+model.add(layers.Conv2D(128, (3, 3), activation='relu'))
+model.add(layers.MaxPooling2D((2, 2)))
 
+model.add(layers.Flatten())
 model.add(layers.Dense(512, activation='relu'))
-model.add(layers.Dense(15, activation='sigmoid'))
+model.add(layers.Dense(15, activation='softmax'))
 
 model.summary()
 
+epochs = 25
+learning_rate = 0.00001
+decay = learning_rate/epochs
+
 model.compile(loss='categorical_crossentropy',
-              optimizer=optimizers.RMSprop(lr=1e-4),
-              metrics=['acc'])
+              optimizer=optimizers.SGD(learning_rate=learning_rate, momentum=0.99),
+              metrics=['accuracy'])
 
 
 history = model.fit(train_images,
                     train_labels,
-                    epochs=20,
+                    epochs=epochs,
                     batch_size=32,
                     validation_split=0.15,
                     shuffle=True
                     )
 
-acc = history.history['acc']
-val_acc = history.history['val_acc']
+acc = history.history['accuracy']
+val_acc = history.history['val_accuracy']
 loss = history.history['loss']
+val_loss = history.history['val_loss']
 
 epochs = range(1, len(acc) + 1)
 
@@ -126,3 +134,15 @@ plt.plot(epochs, acc, 'bo', label='Training acc')
 plt.plot(epochs, val_acc, 'b', label='Validation acc')
 plt.legend()
 plt.figure()
+
+plt.plot(epochs, acc, 'bo', label='Training loss')
+plt.plot(epochs, val_loss, 'b', label='Validation loss')
+plt.title('Training and validation loss')
+plt.legend()
+plt.show()
+
+model.evaluate(test_images,
+               test_labels)
+
+
+
