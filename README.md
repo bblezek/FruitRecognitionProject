@@ -9,7 +9,7 @@ Preprocessing
 
 Model 
 - I experimented with a number of different models with different numbers of layers with a variety of numbers of neurons, different dropout layers, different batch size, different numbers of epochs, different learning rates and momentum.  The model in the repository is the most successful model.
-- I set aside .15% of the data as testing data and then took another .15% of the training data for validation.
+- I set aside 15% of the data as testing data and then took another 15% of the training data for validation.
 
 Further study
 - The images were all fairly clear, taken in a consistent location with fairly consistent lighting, etc.  It would be interesting to add in some images that were not as clear or had different lighting and see how well the model performs
